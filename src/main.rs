@@ -9,9 +9,8 @@ struct Node {
 
 fn main() {
     const num_nodes: usize = 10_000;
-    const bad_nodes: usize = 2_000;
+    const bad_nodes: usize = 2_500;
     const num_packets: usize = BATCH_SIZE;
-    const my_node: usize = 9_999;
     let mut success: usize = 0;
     let mut total: usize = 0;
 
@@ -47,19 +46,16 @@ fn main() {
                 }
             }
         }
-        let mine = nodes[my_node].shreds.into_iter().sum::<u8>() > (BATCH_SIZE / 2) as u8;
         let mut all = 0;
         for node in 0..num_nodes {
             if nodes[node].shreds.into_iter().sum::<u8>() > (BATCH_SIZE / 2) as u8 {
                 all += 1;
             }
         }
-        if mine && (all > 6_666) {
-            success += 1;
-        } else if !mine && (all < 3_333) {
+        if all >= 6_667 || all <= 3_333 {
             success += 1;
         }
         total += 1;
-        println!("{} {} {}/{}", mine, all, success, total);
+        println!("{} {}/{}", all, success, total);
     }
 }
