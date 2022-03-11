@@ -8,7 +8,7 @@ struct Node {
 
 fn main() {
     const num_nodes: usize = 10_000;
-    const bad_nodes: usize = 5_000;
+    const bad_nodes: usize = 3_333;
     const num_packets: usize = 64;
     const my_node:usize = 9_999;
     let mut success: usize = 0;
@@ -22,14 +22,18 @@ fn main() {
             index.shuffle(&mut rng);
             //leader is reliable
             //lvl 0
-            for node in &index[0..200] {
-                nodes[*node].shreds[shred] = 1;
+            let retransmitter = index[0];
+            // if a bad node, skip retransmitting to lvl 0
+            if retransmitter >= bad_nodes {
+                for node in &index[0..200] {
+                    nodes[*node].shreds[shred] = 1;
+                }
             }
             //lvl 1
             for x in 1..50 {
                 let retransmitter = index[x];
                 for node in &index[x*200..(x + 1)*200] {
-                    if *node == my_node && retransmitter < bad_nodes {
+                    if retransmitter < bad_nodes {
                         continue;
                     }
                     nodes[*node].shreds[shred] = 1;
