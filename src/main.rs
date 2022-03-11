@@ -8,7 +8,7 @@ struct Node {
 
 fn main() {
     const num_nodes: usize = 10_000;
-    const bad_nodes: usize = 1_000;
+    const bad_nodes: usize = 5_000;
     const num_packets: usize = 64;
     const my_node:usize = 9_999;
     let mut success: usize = 0;
