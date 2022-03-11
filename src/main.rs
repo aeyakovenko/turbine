@@ -9,8 +9,9 @@ struct Node {
 
 fn main() {
     const num_nodes: usize = 10_000;
-    const bad_nodes: usize = 2_500;
+    const bad_nodes: usize = 500;
     const num_packets: usize = BATCH_SIZE;
+    let mut fails = 0;
     let mut success: usize = 0;
     let mut total: usize = 0;
 
@@ -55,7 +56,8 @@ fn main() {
         if all >= 6_667 || all <= 3_333 {
             success += 1;
         }
+        fails += num_nodes - all;
         total += 1;
-        println!("{} {}/{}", all, success, total);
+        println!("{} {}/{} {}/{}", all, success, total, fails, total * num_nodes);
     }
 }
