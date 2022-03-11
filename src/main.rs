@@ -1,21 +1,24 @@
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
 
+const BATCH_SIZE: usize = 64;
 #[derive(Clone, Copy)]
 struct Node {
-    shreds: [u8; 64],
+    shreds: [u8; BATCH_SIZE],
 }
 
 fn main() {
     const num_nodes: usize = 10_000;
-    const bad_nodes: usize = 3_333;
-    const num_packets: usize = 64;
+    const bad_nodes: usize = 3_000;
+    const num_packets: usize = BATCH_SIZE;
     const my_node: usize = 9_999;
     let mut success: usize = 0;
     let mut total: usize = 0;
 
     for block in 1..10_001 {
-        let mut nodes: [Node; num_nodes] = [Node { shreds: [0; 64] }; 10_000];
+        let mut nodes: [Node; num_nodes] = [Node {
+            shreds: [0; BATCH_SIZE],
+        }; 10_000];
         for shred in 0..num_packets {
             let mut rng = ChaCha8Rng::seed_from_u64(shred as u64 * block as u64);
             let mut index: Vec<usize> = (0..num_nodes).into_iter().collect();
@@ -44,7 +47,7 @@ fn main() {
                 }
             }
         }
-        if nodes[my_node].shreds.into_iter().sum::<u8>() > 33u8 {
+        if nodes[my_node].shreds.into_iter().sum::<u8>() > (BATCH_SIZE / 2) as u8 {
             success += 1;
         }
         total += 1;
