@@ -2,8 +2,8 @@ use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
 
 const BATCH_SIZE: usize = 96;
-const VOTE_SIZE: usize = 42; // 0.44 * 96
-const RECOVER_SIZE: usize = BATCH_SIZE/3;
+const VOTE_SIZE: usize = BATCH_SIZE / 3; // 0.40 * 96
+const RECOVER_SIZE: usize = BATCH_SIZE / 3;
 #[derive(Clone, Copy)]
 struct Node {
     shreds: [u8; BATCH_SIZE],
@@ -37,7 +37,7 @@ fn main() {
                 }
             }
             //lvl 1
-            for x in 1..(num_nodes/hood_size) {
+            for x in 1..(num_nodes / hood_size) {
                 let retransmitter = index[x];
                 //skip if node was skipped by a bad node
                 if nodes[retransmitter].shreds[shred] == 0 {
@@ -51,23 +51,14 @@ fn main() {
                 }
             }
         }
-        let mut voted = 0;
-        for node in 0..num_nodes {
-            if nodes[node].shreds.into_iter().sum::<u8>() > VOTE_SIZE  as u8 {
-                voted += 1;
-            }
-        }
         let mut recovered = 0;
         for node in 0..num_nodes {
             if nodes[node].shreds.into_iter().sum::<u8>() > RECOVER_SIZE as u8 {
                 recovered += 1;
             }
         }
-
-        if voted > 3_3333 && recovered < 6_666 {
-            fails += recovered;
-        }
+        fails += num_nodes - recovered;
         total += 1;
-        println!("{} {} {}/{}", voted, recovered, fails, total);
+        println!("{} {}/{}", recovered, fails, total);
     }
 }
