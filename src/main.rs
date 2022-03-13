@@ -12,9 +12,14 @@ fn main() {
     const NUM_NODES: usize = 10_000;
     const BAD_NODES: usize = 3_333;
     const NUM_PACKETS: usize = BATCH_SIZE;
-    const HOOD_SIZE: usize = 200;
+    const L0_SIZE: usize = 200;
+    const L1_SIZE: usize = (NUM_NODES - L0_SIZE) / L0_SIZE;
     let mut fails = 0;
+    let mut vote_fail = 0;
     let mut total: usize = 0;
+    let my_node = 9_999;
+    let mut my_node_fail = 0;
+    let mut my_node_fails = 0;
 
     for block in 1..10_001 {
         let mut nodes: [Node; NUM_NODES] = [Node {
@@ -29,21 +34,24 @@ fn main() {
             let retransmitter = index[0];
             // if a bad node, skip retransmitting to lvl 0
             if retransmitter >= BAD_NODES {
-                for node in &index[0..HOOD_SIZE] {
+                for node in &index[0..L0_SIZE] {
                     nodes[*node].shreds[shred] = 1;
                 }
             }
             //lvl 1
-            for x in 1..(NUM_NODES / HOOD_SIZE) {
+            //each l0 node does the same amount of work for l1
+            for x in 0..L0_SIZE {
                 let retransmitter = index[x];
                 //skip if node was skipped by a bad node
                 if nodes[retransmitter].shreds[shred] == 0 {
                     continue;
                 }
-                for node in &index[x * HOOD_SIZE..(x + 1) * HOOD_SIZE] {
-                    if retransmitter < BAD_NODES {
-                        continue;
-                    }
+                //skip if bad node
+                if retransmitter < BAD_NODES {
+                    continue;
+                }
+                let start = 200 + x * L1_SIZE;
+                for node in &index[start..start + L1_SIZE] {
                     nodes[*node].shreds[shred] = 1;
                 }
             }
@@ -54,8 +62,20 @@ fn main() {
                 recovered += 1;
             }
         }
+        if recovered < 6_666 {
+            vote_fail += 1;
+        }
+
+        if nodes[my_node].shreds.into_iter().sum::<u8>() <= RECOVER_SIZE as u8 {
+            my_node_fail += NUM_NODES - recovered;
+            my_node_fails += 1;
+        }
+
         fails += NUM_NODES - recovered;
         total += 1;
-        println!("{} {}/{}", recovered, fails, total);
+        println!(
+            "{} {} {}/{} {}/{}",
+            recovered, fails, vote_fail, total, my_node_fail, my_node_fails
+        );
     }
 }
