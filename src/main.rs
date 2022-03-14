@@ -17,6 +17,7 @@ fn main() {
     let mut fails = 0;
     let mut vote_fail = 0;
     let mut total: usize = 0;
+    let mut max_fail: usize = 0;
     let my_node = 9_999;
     let mut my_node_fail = 0;
     let mut my_node_fails = 0;
@@ -63,6 +64,12 @@ fn main() {
             }
         }
         if recovered < 6_666 {
+            let max = nodes
+                .iter()
+                .map(|n| n.shreds.into_iter().sum::<u8>())
+                .max()
+                .unwrap_or(0);
+            max_fail = std::cmp::max(max.into(), max_fail);
             vote_fail += 1;
         }
 
@@ -74,8 +81,8 @@ fn main() {
         fails += NUM_NODES - recovered;
         total += 1;
         println!(
-            "{} {} {}/{} {}/{}",
-            recovered, fails, vote_fail, total, my_node_fail, my_node_fails
+            "recovered: {}\ntotal_failed: {}\nmax shred in 2/3 fail: {}\n2/3 vote failure: {}/{}\nconditinal failure rate {}/{}\n",
+            recovered, fails, max_fail, vote_fail, total, my_node_fail, my_node_fails
         );
     }
 }
