@@ -69,7 +69,7 @@ fn main() {
                 recovered += 1;
             }
         }
-        if recovered < 6_666 {
+        if recovered <= 6_666 {
             let max = nodes
                 .iter()
                 .map(|n| n.shreds.into_iter().sum::<u8>())
