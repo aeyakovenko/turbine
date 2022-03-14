@@ -36,6 +36,9 @@ fn main() {
             // if a bad node, skip retransmitting to lvl 0
             if retransmitter >= BAD_NODES {
                 for node in &index[0..L0_SIZE] {
+                    if *node < BAD_NODES {
+                        continue;
+                    }
                     nodes[*node].shreds[shred] = 1;
                 }
             }
@@ -53,6 +56,9 @@ fn main() {
                 }
                 let start = 200 + x * L1_SIZE;
                 for node in &index[start..start + L1_SIZE] {
+                    if *node < BAD_NODES {
+                        continue;
+                    }
                     nodes[*node].shreds[shred] = 1;
                 }
             }
