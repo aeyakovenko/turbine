@@ -20,9 +20,10 @@ fn main() {
     let mut max_fail: usize = 0;
     let my_node = 9_999;
     let mut my_node_fail = 0;
+    let mut signaled = 0;
     let mut my_node_fails = 0;
 
-    for block in 1..10_001 {
+    for block in 1..100_000_000 {
         let mut nodes: [Node; NUM_NODES] = [Node {
             shreds: [0; BATCH_SIZE],
         }; 10_000];
@@ -75,10 +76,20 @@ fn main() {
                 .map(|n| n.shreds.into_iter().sum::<u8>())
                 .max()
                 .unwrap_or(0);
+            if max_fail < max.into() {
+                signaled = 0;
+            }
             max_fail = std::cmp::max(max.into(), max_fail);
             vote_fail += 1;
         }
-
+        if recovered > 6_666 {
+            for node in 0..NUM_NODES {
+                if nodes[node].shreds.into_iter().sum::<u8>() > max_fail as u8 {
+                    signaled += 1;
+                }
+            }
+        }
+        //conditinal prob
         if nodes[my_node].shreds.into_iter().sum::<u8>() <= RECOVER_SIZE as u8 {
             my_node_fail += NUM_NODES - recovered;
             my_node_fails += 1;
@@ -87,8 +98,8 @@ fn main() {
         fails += NUM_NODES - recovered;
         total += 1;
         println!(
-            "recovered: {}\ntotal_failed: {}\nmax shred in 2/3 fail: {}\n2/3 vote failure: {}/{}\nconditinal failure rate {}/{}\n",
-            recovered, fails, max_fail, vote_fail, total, my_node_fail, my_node_fails
+            "signaled: {}\nrecovered: {}\ntotal_failed: {}\nmax shred in 2/3 fail: {}\n2/3 vote failure: {}/{}\nconditinal failure rate {}/{}\n",
+            signaled, recovered, fails, max_fail, vote_fail, total, my_node_fail, my_node_fails
         );
     }
 }
