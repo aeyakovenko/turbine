@@ -74,7 +74,11 @@ fn turbine_recoverable() {
                 }
             }
             //recover all shreds
-            for node in &mut nodes {
+            for (ix, node) in &mut nodes.iter_mut().enumerate() {
+                //skip if bad node
+                if ix < BAD_NODES {
+                    continue;
+                }
                 let recover: bool = node.shreds.into_iter().sum::<u8>() > RECOVER_SIZE as u8;
                 if recover {
                     for s in &mut node.shreds {
