@@ -31,43 +31,62 @@ fn turbine_recoverable() {
         let mut nodes: [Node; NUM_NODES] = [Node {
             shreds: [0; BATCH_SIZE],
         }; 10_000];
-        for shred in 0..NUM_PACKETS {
-            let mut rng = ChaCha8Rng::seed_from_u64(shred as u64 * block as u64);
-            let mut index: Vec<usize> = (0..NUM_NODES).into_iter().collect();
-            index.shuffle(&mut rng);
-            //leader is reliable
-            //lvl 0
-            let retransmitter = index[0];
-            // if a bad node, skip retransmitting to lvl 0
-            if retransmitter >= BAD_NODES {
-                for node in &index[0..L0_SIZE] {
-                    if *node < BAD_NODES {
-                        continue;
+        let mut rounds = 0;
+        let mut recovered = true;
+        while recovered {
+            recovered = false;
+            for shred in 0..NUM_PACKETS {
+                let mut rng = ChaCha8Rng::seed_from_u64(shred as u64 * block as u64);
+                let mut index: Vec<usize> = (0..NUM_NODES).into_iter().collect();
+                index.shuffle(&mut rng);
+                //leader is reliable
+                //lvl 0
+                let retransmitter = index[0];
+                // if a bad node, skip retransmitting to lvl 0
+                if retransmitter >= BAD_NODES {
+                    for node in &index[0..L0_SIZE] {
+                        if *node < BAD_NODES {
+                            continue;
+                        }
+                        nodes[*node].shreds[shred] = 1;
                     }
-                    nodes[*node].shreds[shred] = 1;
                 }
-            }
 
-            //lvl 1
-            //each l0 node does the same amount of work for l1
-            for x in 0..L0_SIZE {
-                let retransmitter = index[x];
-                let recovered: bool = nodes[retransmitter].shreds.into_iter().sum::<u8>() > RECOVER_SIZE as u8;
-                if !recovered && nodes[retransmitter].shreds[shred] == 0 {
-                    continue;
-                }
-                //skip if bad node
-                if retransmitter < BAD_NODES {
-                    continue;
-                }
-                let start = 200 + x * L1_SIZE;
-                for node in &index[start..start + L1_SIZE] {
-                    if *node < BAD_NODES {
+                //lvl 1
+                //each l0 node does the same amount of work for l1
+                for x in 0..L0_SIZE {
+                    let retransmitter = index[x];
+                    //skip shred is empty
+                    if nodes[retransmitter].shreds[shred] == 0 {
                         continue;
                     }
-                    nodes[*node].shreds[shred] = 1;
+                    //skip if bad node
+                    if retransmitter < BAD_NODES {
+                        continue;
+                    }
+                    let start = 200 + x * L1_SIZE;
+                    for node in &index[start..start + L1_SIZE] {
+                        if *node < BAD_NODES {
+                            continue;
+                        }
+                        nodes[*node].shreds[shred] = 1;
+                    }
                 }
             }
+            //recover all shreds
+            for node in &mut nodes {
+                let recover: bool = node.shreds.into_iter().sum::<u8>() > RECOVER_SIZE as u8;
+                if recover {
+                    for s in &mut node.shreds {
+                        if *s == 0 {
+                            *s = 1;
+                            //continue the retransmit if even 1 new shred was recovered
+                            recovered = true;
+                        }
+                    }
+                }
+            }
+            rounds += 1;
         }
         let mut recovered = 0;
         for node in 0..NUM_NODES {
@@ -103,8 +122,8 @@ fn turbine_recoverable() {
         fails += NUM_NODES - recovered;
         total += 1;
         println!(
-            "signaled: {}\nrecovered: {}\ntotal_failed: {}\nmax shred in 2/3 fail: {}\n2/3 vote failure: {}/{}\nconditinal failure rate {}/{}\n",
-            signaled, recovered, fails, max_fail, vote_fail, total, my_node_fail, my_node_fails
+            "rounds: {}\nsignaled: {}\nrecovered: {}\ntotal_failed: {}\nmax shred in 2/3 fail: {}\n2/3 vote failure: {}/{}\nconditinal failure rate {}/{}\n",
+            rounds, signaled, recovered, fails, max_fail, vote_fail, total, my_node_fail, my_node_fails
         );
     }
 }
