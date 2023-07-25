@@ -20,8 +20,7 @@ fn turbine_recoverable() {
     const L0_SIZE: usize = 200;
     const L1_SIZE: usize = (NUM_NODES - L0_SIZE) / L0_SIZE;
     let mut fails = 0;
-    let mut sub_33 = 0;
-    let mut min_recovered = NUM_NODES;
+    let mut sub_50 = 0;
     let mut vote_fail = 0;
     let mut total: usize = 0;
     let mut max_fail: usize = 0;
@@ -101,12 +100,9 @@ fn turbine_recoverable() {
                 recovered += 1;
             }
         }
-        if recovered > 0 && recoverd <= 3_333 {
-            sub_33 += 1;
+        if recovered <= 5_000 && recovered > 3_333 {
+            sub_50 += 1;
 
-        }
-        if recovered <= min_recovered {
-            min_recovered = recovered;
         }
         if recovered <= 6_666 {
             let max = nodes
@@ -136,8 +132,8 @@ fn turbine_recoverable() {
         fails += NUM_NODES - recovered;
         total += 1;
         println!(
-            "rounds: {}\nmin: {}\nsub_33: {}\nsignaled: {}\nrecovered: {}\ntotal_failed: {}\nmax shred in 2/3 fail: {}\n2/3 vote failure: {}/{}\nconditinal failure rate {}/{}\n",
-            rounds, min_recovered, sub_33, signaled, recovered, fails, max_fail, vote_fail, total, my_node_fail, my_node_fails
+            "rounds: {}\nsub_50: {}\nsignaled: {}\nrecovered: {}\ntotal_failed: {}\nmax shred in 2/3 fail: {}\n2/3 vote failure: {}/{}\nconditinal failure rate {}/{}\n",
+            rounds, sub_50, signaled, recovered, fails, max_fail, vote_fail, total, my_node_fail, my_node_fails
         );
     }
 }
