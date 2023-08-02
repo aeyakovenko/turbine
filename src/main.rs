@@ -9,18 +9,140 @@ struct Node {
 }
 
 fn main() {
-    turbine_recoverable();
+    //turbine_recoverable();
+    turbine_recoverable_duplicate_blocks();
 }
 
+impl Node {
+    //0: no shreds in block
+    //1: only block 1 shreds
+    //2: only block 2 shreds
+    //3: mixed shreds detected
+    fn check_mixed(&self) -> u8 {
+        let mut mixed = 0;
+        for s in &self.shreds {
+            if mixed == 0 {
+                mixed = *s;
+            }
+            if *s != 0 && mixed != *s {
+                mixed = 3;
+                break;
+            }
+        }
+        mixed
+    }
+    fn check_recovered(&self) -> bool {
+        self.shreds.into_iter().map(|x| u8::from(x > 0)).sum::<u8>() > RECOVER_SIZE as u8
+    }
+}
+ 
+fn turbine_recoverable_duplicate_blocks() {
+    const NUM_NODES: usize = 10_000;
+    const BAD_NODES: usize = 4000;
+    const NUM_PACKETS: usize = BATCH_SIZE;
+    const L0_SIZE: usize = 200;
+    const L1_SIZE: usize = (NUM_NODES - L0_SIZE) / L0_SIZE;
+    let mut total: usize = 0;
+
+    for block in 1..100_000_000 {
+        let mut nodes: [Node; NUM_NODES] = [Node {
+            shreds: [0; BATCH_SIZE],
+        }; 10_000];
+        let mut rounds = 0;
+        let mut recovered = true;
+        while recovered {
+            recovered = false;
+            for shred in 0..NUM_PACKETS {
+                let mut rng = ChaCha8Rng::seed_from_u64(shred as u64 * block as u64);
+                let mut index: Vec<usize> = (0..NUM_NODES).into_iter().collect();
+                index.shuffle(&mut rng);
+                //leader is reliable
+                //lvl 0
+                let retransmitter = index[0];
+                for node in &index[0..L0_SIZE] {
+                    //default just retransmit the shred
+                    nodes[*node].shreds[shred] = nodes[retransmitter].shreds[shred];
+                    // But if retransmitter is a bad node, retransmit block 1 to odd, block 2 to even
+                    if retransmitter < BAD_NODES && *node % 2 == 0 {
+                        nodes[*node].shreds[shred] = 2;
+                    } else {
+                        nodes[*node].shreds[shred] = 1;
+                    }
+                }
+
+                //lvl 1
+                //each l0 node does the same amount of work for l1
+                for x in 0..L0_SIZE {
+                    let retransmitter = index[x];
+                    //skip shred is empty
+                    if nodes[retransmitter].shreds[shred] == 0 {
+                        continue;
+                    }
+                    let start = 200 + x * L1_SIZE;
+                    for node in &index[start..start + L1_SIZE] {
+                        //default just retransmit the shred
+                        nodes[*node].shreds[shred] = nodes[retransmitter].shreds[shred];
+                        // But if retransmitter is a bad node, retransmit block 1 to odd, block 2 to even
+                        if retransmitter < BAD_NODES && *node % 2 == 0 {
+                            nodes[*node].shreds[shred] = 2;
+                        } else {
+                            nodes[*node].shreds[shred] = 1;
+                        }
+                    }
+                }
+            }
+            //recover all shreds
+            for (ix, node) in &mut nodes.iter_mut().enumerate() {
+                let mixed = node.check_mixed();
+                let recover: bool = node.check_recovered();
+                //cant recover mixed blocks
+                if recover && mixed != 3 {
+                    for s in &mut node.shreds {
+                        if *s == 0 {
+                            *s = mixed;
+                            //continue the retransmit if even 1 new shred was recovered
+                            recovered = true;
+                        }
+                    }
+                }
+            }
+            rounds += 1;
+        }
+        let mut recovered_1 = 0;
+        let mut recovered_2 = 0;
+        let mut mixed_3 = 0;
+        for node in 0..NUM_NODES {
+            let mixed = nodes[node].check_mixed();
+            let recover: bool = nodes[node].check_recovered();
+            if recover && mixed == 1 {
+                recovered_1 += 1;
+            }
+            if recover && mixed == 2 {
+                recovered_2 += 1;
+            }
+            if mixed == 3 {
+                mixed_3 += 1;
+            }
+        }
+        total += 1;
+        println!(
+            "total: {}\nr1: {}\nr2: {}\nmixed: {}\n",
+            total, recovered_1, recovered_2, mixed_3
+        );
+    }
+}
 
 fn turbine_recoverable() {
     const NUM_NODES: usize = 10_000;
-    const BAD_NODES: usize = 3_333;
+    const BAD_NODES: usize = 4_000;
+    //const BAD_NODES: usize = 4_333;
     const NUM_PACKETS: usize = BATCH_SIZE;
     const L0_SIZE: usize = 200;
     const L1_SIZE: usize = (NUM_NODES - L0_SIZE) / L0_SIZE;
     let mut fails = 0;
-    let mut sub_50 = 0;
+    let mut r_33_50 = 0;
+    let mut r_33 = 0;
+    let mut r_50 = 0;
     let mut vote_fail = 0;
     let mut total: usize = 0;
     let mut max_fail: usize = 0;
@@ -100,9 +222,12 @@ fn turbine_recoverable() {
                 recovered += 1;
             }
         }
-        if recovered <= 5_000 && recovered > 3_333 {
-            sub_50 += 1;
-
+        if recovered <= 3_333 {
+            r_33 += 1;
+        } else if recovered <= 5_000 && recovered > 3_333 {
+            r_33_50 += 1;
+        } else if recovered > 5_000 {
+            r_50 += 1;
         }
         if recovered <= 6_666 {
             let max = nodes
@@ -132,8 +257,8 @@ fn turbine_recoverable() {
         fails += NUM_NODES - recovered;
         total += 1;
         println!(
-            "rounds: {}\nsub_50: {}\nsignaled: {}\nrecovered: {}\ntotal_failed: {}\nmax shred in 2/3 fail: {}\n2/3 vote failure: {}/{}\nconditinal failure rate {}/{}\n",
-            rounds, sub_50, signaled, recovered, fails, max_fail, vote_fail, total, my_node_fail, my_node_fails
+            "rounds: {}\nr_33: {}\nr_33_50: {}\nr_50: {}\nsignaled: {}\nrecovered: {}\ntotal_failed: {}\nmax shred in 2/3 fail: {}\n2/3 vote failure: {}/{}\nconditinal failure rate {}/{}\n",
+            rounds, r_33, r_33_50, r_50, signaled, recovered, fails, max_fail, vote_fail, total, my_node_fail, my_node_fails
         );
     }
 }
