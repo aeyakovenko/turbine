@@ -32,13 +32,13 @@ impl Node {
         mixed
     }
     fn check_recovered(&self) -> bool {
-        self.shreds.into_iter().map(|x| u8::from(x > 0)).sum::<u8>() > RECOVER_SIZE as u8
+        self.shreds.into_iter().map(|x| u8::from(x > 0)).sum::<u8>() >= RECOVER_SIZE as u8
     }
 }
  
 fn turbine_recoverable_duplicate_blocks() {
     const NUM_NODES: usize = 10_000;
-    const BAD_NODES: usize = 4000;
+    const BAD_NODES: usize = 100;
     const NUM_PACKETS: usize = BATCH_SIZE;
     const L0_SIZE: usize = 200;
     const L1_SIZE: usize = (NUM_NODES - L0_SIZE) / L0_SIZE;
