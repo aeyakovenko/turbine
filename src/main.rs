@@ -60,9 +60,7 @@ fn turbine_recoverable_duplicate_blocks() {
                 //lvl 0
                 let retransmitter = index[0];
                 for node in &index[0..L0_SIZE] {
-                    //default just retransmit the shred
-                    nodes[*node].shreds[shred] = nodes[retransmitter].shreds[shred];
-                    // But if retransmitter is a bad node, retransmit block 1 to odd, block 2 to even
+                    // if retransmitter is a bad node, retransmit block 1 to odd, block 2 to even
                     if retransmitter < BAD_NODES && *node % 2 == 0 {
                         nodes[*node].shreds[shred] = 2;
                     } else {
@@ -80,13 +78,11 @@ fn turbine_recoverable_duplicate_blocks() {
                     }
                     let start = 200 + x * L1_SIZE;
                     for node in &index[start..start + L1_SIZE] {
-                        //default just retransmit the shred
-                        nodes[*node].shreds[shred] = nodes[retransmitter].shreds[shred];
-                        // But if retransmitter is a bad node, retransmit block 1 to odd, block 2 to even
+                        // if retransmitter is a bad node, retransmit block 2 to even
                         if retransmitter < BAD_NODES && *node % 2 == 0 {
                             nodes[*node].shreds[shred] = 2;
                         } else {
-                            nodes[*node].shreds[shred] = 1;
+                            nodes[*node].shreds[shred] = nodes[retransmitter].shreds[shred];
                         }
                     }
                 }
